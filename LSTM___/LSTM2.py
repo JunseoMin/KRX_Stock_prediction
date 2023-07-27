@@ -77,7 +77,8 @@ class LSTM2():
     self.model.add(Dense(16, activation='relu'))
     # output layer (many-to-many with TimeDistributed)
     self.model.add(TimeDistributed(Dense(len(self.data.columns), activation='relu')))
-
+  
+  @tf.function(reduce_retracing=True)
   def train_model(self):
     model_save_path = '/content/drive/MyDrive/2023_1st_vac/KRX_modelings/best_model/LSTM2/'
     self.filename = join(model_save_path, 'checkpoint_0726_{}.ckpt'.format(self.idx))
