@@ -14,12 +14,14 @@ from os.path import join
 import tensorflow as tf
 
 
-class Transformer2():
+class Transformer():
+    
     def __init__(self, data, idx,day):
         self.data = data
         self.idx = idx
         self.time_steps = 60
         self.day=day
+        
         
     def create_sequences(self, data):
         num_samples, num_features = data.shape
@@ -63,26 +65,9 @@ class Transformer2():
         self.y_test=self.create_sequences(y_test)
         self.y_val=self.create_sequences(y_val)
 
-
-    def transformer_model(self):
-        # Input layer
-        inputs = Input(shape=(self.time_steps, self.num_features))
-        
-        # Transformer Encoder
-        x = inputs
-        for _ in range(4):  # Transformer Encoder Block의 반복 횟수 (하이퍼파라미터)
-            x = self.transformer_encoder_block(x)
-        
-        # Output layer
-        x = Dense(self.num_features, activation='relu')(x)
-        
-        model = Model(inputs, x, name="transformer_model")
-        return model
-
     def transformer_encoder_block(self, inputs):
         # Multi-Head Self-Attention
-        attention = tf.keras.layers.MultiHeadAttention(
-            key_dim=self.num_features // 8, num_heads=8)(inputs, inputs)
+        attention = tf.keras.layers.MultiHeadAttention(key_dim=self.num_features // 8, num_heads=8)(inputs, inputs)
         attention = Dropout(0.1)(attention)
         x = LayerNormalization(epsilon=1e-6)(inputs + attention)
         
@@ -92,16 +77,28 @@ class Transformer2():
         x = Dense(self.num_features, activation="relu")(x)
         x = LayerNormalization(epsilon=1e-6)(x + inputs)
         return x
+    
+    def transformer_model(self):
+        # Input layer
+        inputs = Input(shape=(self.time_steps, self.num_features))
+        # Transformer Encoder
+        x = inputs
+        for _ in range(4):  # Transformer Encoder Block의 반복 횟수 (하이퍼파라미터)
+            x = self.transformer_encoder_block(x)
+        # Output layer
+        x = Dense(self.num_features, activation='relu')(x)
+        model = Model(inputs, x, name="transformer_model")
+        return model
 
-    @tf.function(reduce_retracing=True)
+
     def train_model(self):
+        self.model = self.transformer_model()
         model_save_path = '/content/drive/MyDrive/2023_1st_vac/KRX_modelings/best_model/Transformer2/{}/'.format(self.day)
         self.filename = join(model_save_path, 'checkpoint_{}_{}.ckpt'.format(self.day,self.idx))
         checkpoint = ModelCheckpoint(self.filename, save_weights_only=True, save_best_only=True, monitor='val_loss', verbose=0)
         earlystopping = EarlyStopping(monitor='val_loss', patience=100)
-        model = self.transformer_model()
-        model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=0.001))  # 학습률 (하이퍼파라미터)
-        self.history = model.fit(self.x_train, self.y_train, epochs=1, batch_size=128, validation_data=(self.x_val, self.y_val), shuffle=False, callbacks=[checkpoint, earlystopping], verbose=0)
+        self.model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=0.001))  # 학습률 (하이퍼파라미터)
+        self.history = self.model.fit(self.x_train, self.y_train, epochs=1, batch_size=128, validation_data=(self.x_val, self.y_val), shuffle=False, callbacks=[checkpoint, earlystopping], verbose=0)
 
     def get_gap_by_test(self):
         self.model.load_weights(self.filename)
@@ -121,13 +118,12 @@ class Transformer2():
 
     def return_val(self):
         self.slicing_data()
-        model = self.transformer_model()  
-        self.train_model()  
-        model.load_weights(self.filename)  
+        self.train_model()
+        self.model.load_weights(self.filename)  
 
         next_input_data = np.copy(self.x_final)
         for day in range(1, 16):
-            pred_day = model.predict(np.expand_dims(next_input_data[-1], axis=0), verbose=0)
+            pred_day = self.model.predict(np.expand_dims(next_input_data[-1], axis=0), verbose=0)
             next_input_data = np.concatenate((next_input_data, pred_day), axis=0)
 
         next_15_days_data = next_input_data[-15:]
@@ -143,6 +139,8 @@ class Transformer2():
         gap = self.get_gap_by_test()
 
         return prices, gap
+
+
 '''
 하이퍼파라미터 추천:
 -->  논문 이상치  instanced
