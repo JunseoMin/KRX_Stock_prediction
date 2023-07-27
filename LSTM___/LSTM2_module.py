@@ -19,10 +19,11 @@ import tensorflow as tf
 
 
 class LSTM2():
-  def __init__(self,data,idx):
+  def __init__(self,data,idx,day):
     self.data=data
     self.idx=idx
     self.time_steps=60
+    self.day=day
 
   def create_sequences(self, data):
     num_samples, num_features = data.shape
@@ -80,8 +81,8 @@ class LSTM2():
   
   @tf.function(reduce_retracing=True)
   def train_model(self):
-    model_save_path = '/content/drive/MyDrive/2023_1st_vac/KRX_modelings/best_model/LSTM2/'
-    self.filename = join(model_save_path, 'checkpoint_0726_{}.ckpt'.format(self.idx))
+    model_save_path = '/content/drive/MyDrive/2023_1st_vac/KRX_modelings/best_model/LSTM2/{}/'.format(self.day)
+    self.filename = join(model_save_path, 'checkpoint_{}_{}.ckpt'.format(self.day,self.idx))
     checkpoint = ModelCheckpoint(self.filename, save_weights_only=True, save_best_only=True, monitor='val_loss', verbose=0)
     earlystopping = EarlyStopping(monitor='val_loss', patience=100)
     self.model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=0.001))
