@@ -2,7 +2,8 @@ KRX stock prediction
 ========================
 - used transformer, Prophet, LSTM model
 - developed in linux 22.04
-- used tensorflow 2.x   
+- used tensorflow 2.x
+- all the results are from ***제1회 KRX 금융 빅데이터 활용 아이디어 경진대회***
 
 ### Tasks
 --------------------------
